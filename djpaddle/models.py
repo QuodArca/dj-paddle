@@ -1,17 +1,17 @@
 import logging
 from datetime import datetime
 
-from django.db import models
 from django.conf import settings as djsettings
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from paddle import PaddleClient
 
-from . import settings, signals, mappers
+from . import mappers, settings, signals
 from .fields import PaddleCurrencyCodeField
-from .utils import PADDLE_DATETIME_FORMAT, PADDLE_DATE_FORMAT
+from .utils import PADDLE_DATE_FORMAT, PADDLE_DATETIME_FORMAT
 
 log = logging.getLogger("djpaddle")
 
@@ -100,7 +100,9 @@ class Plan(PaddleBaseModel):
 
 
 class Price(PaddleBaseModel):
-    plan = models.ForeignKey("djpaddle.Plan", on_delete=models.CASCADE, related_name="prices")
+    plan = models.ForeignKey(
+        "djpaddle.Plan", on_delete=models.CASCADE, related_name="prices"
+    )
     currency = PaddleCurrencyCodeField()
     quantity = models.FloatField()
     recurring = models.BooleanField()
@@ -153,7 +155,7 @@ class Subscription(PaddleBaseModel):
     email = models.EmailField()
     event_time = models.DateTimeField()
     marketing_consent = models.BooleanField()
-    next_bill_date = models.DateTimeField()
+    next_bill_date = models.DateTimeField(null=True, blank=True)
     passthrough = models.TextField()
     quantity = models.IntegerField()
     source = models.URLField()
@@ -240,7 +242,9 @@ def subscription_event(sender, payload, *args, **kwargs):
 if settings.DJPADDLE_LINK_STALE_SUBSCRIPTIONS:
 
     @receiver(post_save, sender=settings.DJPADDLE_SUBSCRIBER_MODEL)
-    def link_stale_subscriptions_to_subscriber(sender, instance, created, *args, **kwargs):
+    def link_stale_subscriptions_to_subscriber(
+        sender, instance, created, *args, **kwargs
+    ):
         if created:
             queryset = Subscription.objects.filter(subscriber=None)
             queryset = mappers.get_subscriptions_by_subscriber(instance, queryset)
@@ -248,7 +252,11 @@ if settings.DJPADDLE_LINK_STALE_SUBSCRIPTIONS:
 
 
 def convert_datetime_strings_to_datetimes(data, model):
-    datetime_fields = [field.name for field in model._meta.get_fields() if isinstance(field, models.DateTimeField)]
+    datetime_fields = [
+        field.name
+        for field in model._meta.get_fields()
+        if isinstance(field, models.DateTimeField)
+    ]
     for field in datetime_fields:
         if field not in data:
             continue
