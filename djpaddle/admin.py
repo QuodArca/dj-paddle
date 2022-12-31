@@ -15,6 +15,7 @@ class PlanAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "name",
+        "billing_type",
     )
 
 
@@ -25,6 +26,8 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "email",
         "status",
         "plan",
+        "event_time",
+        "next_bill_date",
     )
     list_filter = (
         "status",
