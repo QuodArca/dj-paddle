@@ -62,7 +62,9 @@ class TestWebhook(TestCase):
         event_time = subscription.event_time.strftime(PADDLE_DATETIME_FORMAT)
         self.assertEqual(event_time, valid_alert["event_time"])
         self.assertEqual(subscription.id, str(valid_alert["subscription_id"]))
-        self.assertEqual(subscription.marketing_consent, valid_alert["marketing_consent"])
+        self.assertEqual(
+            subscription.marketing_consent, valid_alert["marketing_consent"]
+        )
         next_bill_date = subscription.next_bill_date.strftime(PADDLE_DATE_FORMAT)
         self.assertEqual(next_bill_date, valid_alert["next_bill_date"])
         self.assertEqual(subscription.passthrough, valid_alert["passthrough"])
@@ -74,7 +76,9 @@ class TestWebhook(TestCase):
         self.assertEqual(subscription.update_url, valid_alert["update_url"])
 
     @mock.patch("djpaddle.views.is_valid_webhook", return_value=True)
-    @mock.patch("djpaddle.models.PaddleClient.list_plans", return_value=FAKE_GET_PLAN_RESPONSE)
+    @mock.patch(
+        "djpaddle.models.PaddleClient.list_plans", return_value=FAKE_GET_PLAN_RESPONSE
+    )
     def test_webhook_missing_plan(self, is_valid_webhook, plan_api_get):
         valid_alert = deepcopy(FAKE_ALERT_TEST_SUBSCRIPTION_CREATED)
         valid_alert["p_signature"] = "valid-signature"
@@ -183,6 +187,28 @@ class TestWebhook(TestCase):
         self._send_alert_urlencoded(delete_payload)
         subscription = Subscription.objects.get(id=subscription.id)
         self.assertEqual(subscription.status, delete_data["status"][0])
+
+    @mock.patch("djpaddle.views.is_valid_webhook", return_value=True)
+    def test_subscription_cancelled_no_subscription_webhook(self, is_valid_webhook):
+        # only create a plan, but not a subscription
+        create_payload = self.load_fixture("subscription_created.txt")
+        create_data = parse_qs(create_payload)
+        Plan.objects.create(
+            pk=int(create_data["subscription_plan_id"][0]),
+            name="monthly-subscription",
+            billing_type="month",
+            billing_period=1,
+            trial_days=0,
+        )
+        # get cancellation for non-existent subscription
+        # e.g. admin deleted record
+        delete_payload = self.load_fixture("subscription_cancelled.txt")
+        delete_data = parse_qs(delete_payload)
+        self.assertEqual(delete_data["status"][0], "deleted")
+
+        self._send_alert_urlencoded(delete_payload)
+        # subscription = Subscription.objects.get(id=subscription.id)
+        # self.assertEqual(subscription.status, delete_data["status"][0])
 
     @mock.patch("djpaddle.views.is_valid_webhook", return_value=True)
     def test_subscription_updated_webhook_previous_event(self, is_valid_webhook):
