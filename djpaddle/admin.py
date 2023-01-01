@@ -28,6 +28,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "plan",
         "event_time",
         "next_bill_date",
+        "cancellation_effective_date",
     )
     list_filter = (
         "status",

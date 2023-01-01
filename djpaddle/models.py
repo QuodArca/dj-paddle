@@ -149,6 +149,7 @@ class Subscription(PaddleBaseModel):
         on_delete=models.CASCADE,
     )
 
+    cancellation_effective_date = models.DateTimeField(null=True, blank=True)
     cancel_url = models.URLField()
     checkout_id = models.CharField(max_length=64)
     currency = models.CharField(max_length=3)
